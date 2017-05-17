@@ -1,0 +1,202 @@
+<html>
+    <head>
+        <title>Chat with socket io and node js</title>
+        
+        <style>
+            
+            #chatDiv {
+                width: 800px;
+                overflow-x: scroll;
+                height: 400px;
+                margin-top: 100px;
+                border: 1px solid black;
+            }
+            
+            
+            #chat {
+            
+            }
+            
+            
+            #contentWrap {
+                display: none;
+            }
+            
+            #chatWrap {
+                float: left;
+            }
+            
+            .error {
+                color: red;
+            }
+            .whisper {
+                font-size: 16px;
+                color: gray;
+                font-style: italic;
+                margin-left: 30px;
+                display:block;
+            }
+            
+            #usersDiv {
+                height: 400px;
+                margin-top: 100px;
+                overflow: scroll;
+                width: auto;
+                background-color:aliceblue;
+            }
+            
+            #users {
+                margin-left: 10px;
+                color: red;
+            }
+            
+            .msg {
+                margin-left: 10px;
+                font-size: 14px;
+                padding: 1px;
+                font-family: cursive;
+            }
+            
+            strong {
+                font-size: 16px;
+                color: darkblue;
+            }
+            
+            
+        </style>
+    </head>
+    
+    <body>
+       
+       <div id="nickWrap" class="container">
+          <div class="row">
+              <div class="col-sm-6 col-sm-offset-3">
+                   <p class="lead">Enter a username:</p>
+                   <p id="nickError" class="text-warning"></p>
+                   <div class="row">
+                       <form id="setNick" class="form-group">
+                           <input size="35" id="nickname" class="form-control" placeholder="Enter username"/><br/>
+                           <input type="submit" class="btn btn-primary btn-lg"/>
+                       </form>
+                   </div>
+               </div>
+           </div>
+       </div>
+       
+        
+        <div class="container">
+          <div class="row">
+             <div class="co-sm-4 col-sm-offset-2">
+                  <h4>For private chat, type: <small><kbd>/w username message</kbd></small> in the chat box</h4>
+             </div>
+          </div>
+           <div class="row">
+              <div id="usersDiv" class="col-sm-2">
+                    <h3 class="text-primary"><kbd>Online Users</kbd></h3>
+                    <div id="users"></div>
+               </div>
+                <div id="contentWrap" class="col-sm-8">
+                   <div id="chatWrap">
+                       <div id="chatDiv" class="row">
+                            <div id="chat"></div>
+                        </div><br/>
+                        <div class="row">
+                           <div class="col-sm-6 col-sm-offset-3">
+                                <form id="send-message" class="form-group">
+                                    <input size="35" id="message" class="form-control" placeholder="Send a message"/><br/>
+                                    <input type="submit" class="form-control btn btn-info" value="Send"/>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        
+        </div>
+        
+        
+        
+        
+        
+        
+        
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+        <script src="https://code.jquery.com/jquery-latest.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        
+        <script>
+            jQuery(function($) {
+                
+                var socket = io.connect();
+                var $nickForm = $('#setNick');
+                var $nickError = $('#nickError');
+                var $nickBox = $('#nickname');
+                var $users = $('#users');
+                var $messageForm = $('#send-message');
+                var $messageBox = $('#message');
+                var $chat = $('#chat');
+                
+                
+                $nickForm.submit(function(e) {
+                    e.preventDefault();
+                    socket.emit('new user', $nickBox.val(), function(data) {
+                        if (data) {
+                            $('#nickWrap').hide();
+                            $('#contentWrap').show();
+                        } else {
+                            $nickError.html("That username is already taken ! Try Again");
+                        }
+                    });
+                    
+                    $nickBox.val('');
+                });
+                
+                
+                socket.on('username', function(data) {
+                    var html = '';
+                    for (var i=0; i < data.length; i++) {
+                        html += data[i] + '<br />'
+                    }
+                    
+                    $users.html(html);
+                });
+                
+                
+                
+                $messageForm.submit(function(e) {
+                    e.preventDefault();
+                    socket.emit('send message', $messageBox.val(), function(data) {
+                        $chat.append('<span class="error">' + data + "</span><br/>");
+                    });
+                    
+                    $messageBox.val('');
+                });
+                
+                
+                
+                socket.on('load old msgs',  function(docs) {
+                    for (var i=docs.length - 1; i >= 0; i--) {
+                        displayMsg(docs[i]);
+                    }
+                });
+                
+                
+                socket.on('new message', function(data) {
+                    displayMsg(data);
+                });
+                
+                
+                function displayMsg(data) {
+                    $chat.append('<span class="msg"><strong>' + data.nick + ': </strong>' + '&nbsp;<mark>' + data.msg + "</mark></span><br/>");
+                }
+                
+                socket.on('whisper', function(data) {
+                    $chat.append('<span class="whisper"><kbd>' + data.nick + ': </kbd>' + '&nbsp<mark>' + data.msg + "</mark></span><br/>");
+                });
+                
+            });
+        </script>
+        
+    </body>
+</html>
